@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id           String              @id @default(uuid()) @map("tenant_id")
+  name         String             @db.VarChar(120)
+  organization String?            @db.VarChar(120)
+  website      String?            @db.VarChar(120)
+  foundingDate DateTime?          @map("founding_date") @db.Date
+  created      DateTime           @default(now()) @db.Timestamp()
+  updated      DateTime           @default(now()) @db.Timestamp()
+  notes        String?            @db.Text
+  message      String?            @db.Text
+  users        User[]
+  roles        Role[]
+  applications ApplicationTenant[]
+
+  @@map("tenants")
+}
+
+model User {
+  id       String     @id @default(uuid()) @map("user_id")
+  tenantId String?    @map("tenant_id")
+  username String     @db.VarChar(120)
+  password String     @db.VarChar(120)
+  created  DateTime   @default(now()) @db.Timestamp()
+  updated  DateTime   @default(now()) @db.Timestamp()
+  notes    String?    @db.Text
+  message  String?    @db.Text
+  tenant   Tenant?    @relation(fields: [tenantId], references: [id])
+  roles    UserRole[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String     @id @default(uuid()) @map("role_id")
+  tenantId    String?    @map("tenant_id")
+  name        String     @db.VarChar(120)
+  canAdd      Boolean    @default(false) @map("can_add")
+  canEdit     Boolean    @default(false) @map("can_edit")
+  canDelete   Boolean    @default(false) @map("can_delete")
+  defaultRole Boolean    @default(false) @map("default_role")
+  created     DateTime   @default(now()) @db.Timestamp()
+  updated     DateTime   @default(now()) @db.Timestamp()
+  notes       String?    @db.Text
+  message     String?    @db.Text
+  tenant      Tenant?    @relation(fields: [tenantId], references: [id])
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model Application {
+  id              String              @id @default(uuid()) @map("application_id")
+  name            String             @db.VarChar(120)
+  created         DateTime           @default(now()) @db.Timestamp()
+  updated         DateTime           @default(now()) @db.Timestamp()
+  notes           String?            @db.Text
+  applicationData String?            @map("application_data") @db.Text
+  tenants         ApplicationTenant[]
+
+  @@map("applications")
+}
+
+model ApplicationTenant {
+  applicationId String      @map("application_id")
+  tenantId     String      @map("tenant_id")
+  application  Application @relation(fields: [applicationId], references: [id])
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+
+  @@id([applicationId, tenantId])
+  @@map("application_tenants")
+}
+
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+  user   User   @relation(fields: [userId], references: [id])
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
